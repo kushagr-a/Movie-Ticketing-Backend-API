@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { UserModel } from "../model/users.model";
-import { createError } from "../utils/createError.utils";
-import { MovieModel } from "../model/movie.model";
-import { BookingModel } from "../model/booking.model";
+import { UserModel } from "../user/users.model"
+import { createError } from "../../utils/createError.utils"
+import { MovieModel } from "../booking/movie.model";
+import { BookingModel } from "../booking/booking.model";
 
 // Controller for Register Admin
 export const registerAdmin = async (
@@ -265,21 +265,21 @@ export const getAllBookings = async (
 };
 
 // get all reviews
-export const getaAllReviews = async(req: Request, res: Response) : Promise<void> =>{
+export const getaAllReviews = async (req: Request, res: Response): Promise<void> => {
   try {
     const reviews = await BookingModel.find({
-      rating: {$exists: true},
-      review: {$exists: true},
+      rating: { $exists: true },
+      review: { $exists: true },
     })
-     .populate("user", "fullname email") // show user's name 
-     .populate("movie", "name") // show movie name
-     .select("rating review user movie") // only selected fields
+      .populate("user", "fullname email") // show user's name 
+      .populate("movie", "name") // show movie name
+      .select("rating review user movie") // only selected fields
 
-     res.status(200).json({
+    res.status(200).json({
       success: true,
       message: "All reviews fetched successfully",
       data: reviews,
-     })
+    })
   } catch (error: any) {
     res.status(500).json({
       success: false,

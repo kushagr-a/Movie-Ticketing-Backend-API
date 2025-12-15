@@ -2,7 +2,7 @@ import { Request,Response, NextFunction } from "express";
 import jwt from "jsonwebtoken"
 import {createError} from "../utils/createError.utils"
 
-// 👇 Extended Request interface to include 'user'
+// Extended Request interface to include 'user'
 interface CustomRequest extends Request {
     user?: any;
   }

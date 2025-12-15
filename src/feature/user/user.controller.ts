@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { UserModel } from "../model/users.model";
-import { createError } from "../utils/createError.utils";
-import { MovieModel } from "../model/movie.model";
+import { UserModel } from "./users.model";
+import { createError } from "../../utils/createError.utils";
+import { MovieModel } from "../booking/movie.model";
 import mongoose from "mongoose";
-import { BookingModel } from "../model/booking.model";
-import { sendMail } from "../utils/sendMail";
+import { BookingModel } from "../booking/booking.model";
+import { sendMail } from "../../utils/mail/sendMail";
 
 // Controller for Register User
 export const registerUser = async (
@@ -262,8 +262,7 @@ export const confirmBooking = async (
       subject: "🎟️ Your Ticket is Confirmed!",
       html: `
         <h3>Hi ${user?.fullname || "User"},</h3>
-        <p>Your ticket for <strong>${
-          movie?.name || "Movie"
+        <p>Your ticket for <strong>${movie?.name || "Movie"
         }</strong> is confirmed!</p>
         <p>🪑 Seats: ${booking?.seatNumbers?.join(", ")}</p>
         <p>📍 Date: ${new Date(booking?.bookingTime).toDateString()}</p>

@@ -12,12 +12,12 @@ import {
   updateMovie,
   getAllBookings,
   getaAllReviews,
-} from "../controller/admin.controller";
+} from "./admin.controller";
 
 /**
  * auth middleware
  */
-import { isAdmin } from "../middleware/isAdmin.middleware";
+import { isAdmin } from "../../middleware/isAdmin.middleware";
 
 const router = Router();
 

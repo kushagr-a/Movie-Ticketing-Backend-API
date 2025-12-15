@@ -11,9 +11,9 @@ import {
   BookTicket,
   confirmBooking,
   giveRatingAndReview,
-} from "../controller/user.controller";
+} from "./user.controller";
 
-import { isAuthenticated } from "../middleware/isAuthorized.middleware";
+import { isAuthenticated } from "../../middleware/isAuthorized.middleware";
 
 const router = Router();
 
