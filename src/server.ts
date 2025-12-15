@@ -3,6 +3,18 @@ import connectDB from "./db/db.config";
 import dotenv from "dotenv";
 dotenv.config({ path: "./.env" });
 
+// Development mode
+if (process.env.NODE_ENV !== "production") {
+    app.get("/dbString", (req, res) => {
+        return res.status(200).json({
+            message: `DB mode: ${process.env.NODE_ENV}`,
+            dbString: process.env.DB_STRING,
+        })
+    })
+} else {
+    console.log("DB mode: production")
+}
+
 // Connection monitoring status
 let lastMonitoringTime = Date.now();
 const MONITORING_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -38,9 +50,7 @@ const startServer = async () => {
                 process.exit(0);
             })
         })
-
-        // Database connection
-        await connectDB()
+        
     } catch (error) {
         console.log(error);
         process.exit(1);
