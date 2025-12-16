@@ -7,13 +7,13 @@ import { Role } from "./authTypes";
 // Controller for Register User
 export const register = async (req: Request, res: Response) => {
     try {
-        const { fullName, email, password, role } = req.body;
+        const { fullName, email, password, role, city } = req.body;
 
         //  Basic validation
-        if (!fullName || !email || !password) {
+        if (!fullName || !email || !password || !city) {
             return res.status(400).json({
                 success: false,
-                message: "fullName, email and password are required",
+                message: "fullName, email, password and city are required",
             });
         }
 
@@ -36,7 +36,7 @@ export const register = async (req: Request, res: Response) => {
         if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: "User already exists",
+                message: "User already exists with this email",
             });
         }
 
@@ -62,6 +62,7 @@ export const register = async (req: Request, res: Response) => {
             email: normalizedEmail,
             password: hashedPassword,
             role: userRole,
+            city: city.trim(),
         });
 
         // Generate JWT

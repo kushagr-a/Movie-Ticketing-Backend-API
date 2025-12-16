@@ -13,7 +13,7 @@ import {
   giveRatingAndReview,
 } from "./user.controller";
 
-import { isAuthenticated } from "../../middleware/isAuthorized.middleware";
+import { verifyToken } from "../auth/tokenVerify";
 
 const router = Router();
 
@@ -27,17 +27,17 @@ const router = Router();
 // router.post("/logout", logoutUser);
 
 // Get all movie by admin
-router.get("/all-movies", isAuthenticated, getAllMovies);
+router.get("/all-movies", verifyToken, getAllMovies);
 
 // booking movie tickets
-router.post("/book-ticket", isAuthenticated, BookTicket);
+router.post("/book-ticket", verifyToken, BookTicket);
 // router.get("/test", (req: Request, res: Response)=>{
 //   res.send("Test route working!")
 // });
 
 // Confirm Bookig Ticket
-router.patch("/confirm-booking/:bookingId", isAuthenticated, confirmBooking);
+router.patch("/confirm-booking/:bookingId", verifyToken, confirmBooking);
 
 // Give Rating and Review to the movie
-router.post("/give-rating/:bookingId", isAuthenticated, giveRatingAndReview);
+router.post("/give-rating/:bookingId", verifyToken, giveRatingAndReview);
 export default router;
