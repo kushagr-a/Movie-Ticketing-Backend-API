@@ -1,19 +1,6 @@
 import app from "./app";
-import connectDB from "./db/db.config";
 import dotenv from "dotenv";
-dotenv.config({ path: "./.env" });
-
-// Development mode
-if (process.env.NODE_ENV !== "production") {
-    app.get("/dbString", (req, res) => {
-        return res.status(200).json({
-            message: `DB mode: ${process.env.NODE_ENV}`,
-            dbString: process.env.DB_STRING,
-        })
-    })
-} else {
-    console.log("DB mode: production")
-}
+dotenv.config();
 
 // Connection monitoring status
 let lastMonitoringTime = Date.now();
@@ -43,14 +30,7 @@ const startServer = async () => {
             })
         })
 
-        process.on("SIGTERM", () => {
-            console.log("\nApp terminated...");
-            server.close(() => {
-                console.log("App terminated...");
-                process.exit(0);
-            })
-        })
-        
+
     } catch (error) {
         console.log(error);
         process.exit(1);

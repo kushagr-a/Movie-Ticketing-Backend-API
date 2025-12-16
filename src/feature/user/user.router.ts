@@ -4,9 +4,9 @@ import { Request, Response } from "express";
  * Controller modules
  */
 import {
-  registerUser,
-  loginUser,
-  logoutUser,
+  // registerUser,
+  // loginUser,
+  // logoutUser,
   getAllMovies,
   BookTicket,
   confirmBooking,
@@ -17,14 +17,14 @@ import { isAuthenticated } from "../../middleware/isAuthorized.middleware";
 
 const router = Router();
 
-// Register Router
-router.post("/register", registerUser);
+// // Register Router
+// router.post("/register", registerUser);
 
-// Login User
-router.post("/login", loginUser);
+// // Login User
+// router.post("/login", loginUser);
 
-// Logout User
-router.post("/logout", logoutUser);
+// // Logout User
+// router.post("/logout", logoutUser);
 
 // Get all movie by admin
 router.get("/all-movies", isAuthenticated, getAllMovies);

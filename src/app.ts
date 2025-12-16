@@ -1,51 +1,53 @@
 import express from "express";
+import apiRoutes from "./apiRoutes";
+import connectDB from "./db/db";
 const app = express();
 
-// Manually Modules
+// Core Modules
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
-// Manually Middleware
-app.use(express.json()); // Handaling the Json data
-app.use(express.urlencoded({ extended: true })); // Handaling the form data
-app.use(cookieParser());
+// Core Middleware
+app.use(express.json()); // Handling JSON data
+app.use(express.urlencoded({ extended: true })); // Handling form data
+app.use(cookieParser()); // Parse cookies
 
 // CORS Middleware
 app.use(cors({
-  origin: process.env.CORS_oRIGIN?.split(",") || "http://localhost:5173",
+  origin: process.env.CORS_ORIGIN?.split(",") || "http://localhost:5173",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// Lazy DB connection middleware
-import { skipDb } from "./utils/SkipRoutes/skipDb"
-import { resetIdleTimer } from "./db/db.config"
+// Lazy DB Connection Middleware
+import { skipDb } from "./utils/SkipRoutes/skipDb";
+import { resetIdleTimer } from "./db/db";
+
 app.use(async (req, res, next) => {
   try {
     if (!skipDb(req.path)) {
-      // connect to DB
-      await connectDB() // connect only when needed
-      resetIdleTimer()// reset idle timer
+      // Connect to DB only when needed
+      await connectDB();
+      resetIdleTimer(); // Reset idle timer to prevent disconnection
     }
-    next()
+    next();
   } catch (error: any) {
     console.error("MongoDB connection error:", error.message);
     return res.status(500).json({
       error: "Database connection error"
-    })
+    });
   }
+});
 
-})
-
-// Health monitoring route
+// Health Monitoring Route 
 app.get("/health", (req, res) => {
   const memUsage = process.memoryUsage();
   const cpuUsage = process.cpuUsage();
 
   res.json({
     status: true,
-    message: "Health Check complete",
+    message: "Health check complete",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
@@ -59,17 +61,8 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Health Check
-app.get("/", (req, res) => {
-  res.json({
-    status: true,
-    message: "Health Check complete",
-  });
-});
 
-// Main Routes
-import apiRoutes from "./apiRoutes";
-import connectDB from "./db/db.config";
+// Main API Routes
 app.use("/api", apiRoutes);
 
-export default app
+export default app;

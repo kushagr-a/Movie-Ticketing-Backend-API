@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { UserModel } from "../user/users.model"
+import { UserModel } from "../auth/users.model"
 import { createError } from "../../utils/createError.utils"
 import { MovieModel } from "../booking/movie.model";
 import { BookingModel } from "../booking/booking.model";
