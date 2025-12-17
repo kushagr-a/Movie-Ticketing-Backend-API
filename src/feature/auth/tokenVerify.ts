@@ -4,15 +4,15 @@ import jwt, {
     TokenExpiredError
 } from "jsonwebtoken";
 
-export interface AuthRequest extends Request {
-    user?: {
-        id: string;
-        role: string;
-    }
-}
+// export interface AuthRequest extends Request {
+//     user?: {
+//         id: string;
+//         role: string;
+//     }
+// }
 
 export const verifyToken = (
-    req: AuthRequest,
+    req: Request,
     res: Response,
     next: NextFunction
 ) => {

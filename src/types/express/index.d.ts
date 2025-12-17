@@ -1,18 +1,13 @@
-declare namespace Express {
-    export interface Request {
-      user?: {
-        id: string;
-        role: string;
-      };
-    }
-  }
-  import { UserDocument } from "../models/user.model"; // adjust path
+import "express";
 
 declare global {
   namespace Express {
     interface Request {
+      user?: {
+        id: string;
+        role: string;
+      };
       file?: Express.Multer.File;
-      user?: UserDocument; // agar JWT auth laga hai
     }
   }
 }
