@@ -39,6 +39,7 @@ export enum MovieGenre {
   ACTION = "action",
   DRAMA = "drama",
   SCIFI = "sci-fi",
+  ROMANTIC = "romantic",
 }
 
 export enum MovieIndustry {
@@ -84,14 +85,18 @@ const movieSchema = new Schema<IMovie>(
       enum: Object.values(MovieGenre),
       required: true,
       index: true,
+      lowercase: true,
+      trim: true,
     },
-
     industry: {
       type: String,
       enum: Object.values(MovieIndustry),
       required: true,
       index: true,
+      lowercase: true,
+      trim: true,
     },
+
 
     rating: {
       type: Number,

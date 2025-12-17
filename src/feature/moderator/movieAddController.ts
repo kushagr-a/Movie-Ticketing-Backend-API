@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { MovieModel } from "../booking/movie.model";
+import { MovieModel } from "../booking/movie/movieModel";
 import mongoose from "mongoose";
 
 export const addMovie = async (req: Request, res: Response) => {

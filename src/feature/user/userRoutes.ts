@@ -4,30 +4,22 @@ import { Request, Response } from "express";
  * Controller modules
  */
 import {
-  // registerUser,
-  // loginUser,
-  // logoutUser,
   getAllMovies,
+  searchMovie,
   BookTicket,
-  confirmBooking,
-  giveRatingAndReview,
-} from "./user.controller";
+  // confirmBooking,
+  // giveRatingAndReview,
+} from "./userController";
 
 import { verifyToken } from "../auth/tokenVerify";
 
 const router = Router();
 
-// // Register Router
-// router.post("/register", registerUser);
-
-// // Login User
-// router.post("/login", loginUser);
-
-// // Logout User
-// router.post("/logout", logoutUser);
-
 // Get all movie by admin
 router.get("/all-movies", verifyToken, getAllMovies);
+
+// search movie
+router.get("/searchMovie", verifyToken, searchMovie);
 
 // booking movie tickets
 router.post("/book-ticket", verifyToken, BookTicket);
@@ -36,8 +28,8 @@ router.post("/book-ticket", verifyToken, BookTicket);
 // });
 
 // Confirm Bookig Ticket
-router.patch("/confirm-booking/:bookingId", verifyToken, confirmBooking);
+// router.patch("/confirm-booking/:bookingId", verifyToken, confirmBooking);
 
 // Give Rating and Review to the movie
-router.post("/give-rating/:bookingId", verifyToken, giveRatingAndReview);
+// router.post("/give-rating/:bookingId", verifyToken, giveRatingAndReview);
 export default router;
