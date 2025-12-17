@@ -35,6 +35,8 @@ export const addMovie = async (req: AuthRequest, res: Response) => {
             });
         }
 
+        // const populatedMovie  = await movie.populate("createdBy");
+
         const movie = await MovieModel.create({
             name,
             genre,
@@ -49,10 +51,18 @@ export const addMovie = async (req: AuthRequest, res: Response) => {
             createdBy: new mongoose.Types.ObjectId(req.user!.id),
         });
 
+        // const populatedMovie = await movie.populate({
+        //     path: "createdBy",
+        //     select: "role -_id",
+        // });
+
         return res.status(201).json({
             success: true,
             message: "Movie added successfully",
-            movie,
+            movie: {
+                ...movie.toObject(),
+                createdBy: req.user!.role,
+            },
         });
     } catch (error) {
         console.error("ADD MOVIE ERROR:", error);

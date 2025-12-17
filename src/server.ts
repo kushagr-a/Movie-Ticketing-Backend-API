@@ -23,9 +23,8 @@ const startServer = async () => {
 
         // Graceful shutdown 
         process.on("SIGINT", () => {
-            console.log("\nApp terminated...");
             server.close(() => {
-                console.log("App terminated...");
+                console.log("Server closed...");
                 process.exit(0);
             })
         })

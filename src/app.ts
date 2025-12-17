@@ -22,14 +22,11 @@ app.use(cors({
 
 // Lazy DB Connection Middleware
 import { skipDb } from "./utils/SkipRoutes/skipDb";
-import { resetIdleTimer } from "./db/db";
-
 app.use(async (req, res, next) => {
   try {
     if (!skipDb(req.path)) {
       // Connect to DB only when needed
       await connectDB();
-      resetIdleTimer(); // Reset idle timer to prevent disconnection
     }
     next();
   } catch (error: any) {
