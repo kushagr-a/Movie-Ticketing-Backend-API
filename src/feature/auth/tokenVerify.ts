@@ -3,13 +3,7 @@ import jwt, {
     JsonWebTokenError,
     TokenExpiredError
 } from "jsonwebtoken";
-
-// export interface AuthRequest extends Request {
-//     user?: {
-//         id: string;
-//         role: string;
-//     }
-// }
+import { Role } from "../RBAC/Role";
 
 export const verifyToken = (
     req: Request,
@@ -41,7 +35,7 @@ export const verifyToken = (
         // Attach user to request
         req.user = {
             id: decoded.id,
-            role: decoded.role,
+            role: decoded.role as Role,
         };
 
         next();

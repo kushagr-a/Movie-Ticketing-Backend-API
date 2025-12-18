@@ -1,6 +1,4 @@
-export enum Role {
-  USER = "user",
-}
+import { Role } from "../RBAC/Role";
 
 export interface RegisterDTO {
   fullName: string;

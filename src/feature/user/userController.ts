@@ -1,20 +1,62 @@
 import { Request, Response } from "express";
-import { createError } from "../../utils/createError.utils";
+// import { createError } from "../../utils/createError.utils";
 import { MovieModel } from "../booking/movie/movieModel";
 import mongoose from "mongoose";
 import { BookingModel } from "../booking/movieBooking/bookingModel";
 import { sendMail } from "../../utils/mail/sendMail";
+import { UserModel } from "../auth/users.model";
+import { SEAT_PRICE_MAP } from "../../utils/constant/constants";
+import { allocateSeats } from "../../utils/services/seatHelperFun";
+
+// Getting User profile
+export const userProfile = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID",
+      });
+    }
+
+    const user = await UserModel.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      message: "User profile fetched successfully",
+      success: true,
+      user,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch user",
+      error: error.message,
+    });
+  }
+}
 
 // Get all movies those upload by admin for users
 export const getAllMovies = async (req: Request, res: Response) => {
   try {
-    const movies = await MovieModel.find()
-      .select("-__v")
-      .sort({ createdAt: -1 });
+    const filter = { isActive: true };
+
+    const [movies, total] = await Promise.all([
+      MovieModel.find(filter)
+        .select("-__v")
+        .sort({ createdAt: -1 }),
+      MovieModel.countDocuments(filter),
+    ]);
 
     return res.status(200).json({
       success: true,
-      // total: movies.length,
+      totalMovies: total,
       movies,
     });
   } catch (error: any) {
@@ -61,178 +103,123 @@ export const searchMovie = async (req: Request, res: Response) => {
   }
 };
 
-// BookTicket by user
-export const BookTicket = async (
-  req: Request,
-  res: Response
-) => {
+export const bookMovie = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id;
-    const { movieId, seatNumbers } = req.body;
-
-    // validate inputs
-    if (
-      !movieId ||
-      !seatNumbers ||
-      !Array.isArray(seatNumbers) ||
-      seatNumbers.length === 0
-    ) {
-      throw createError(
-        400,
-        "Movie ID and at least one seat number is  required."
-      );
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
 
-    // check valid movie Id
-    if (!mongoose.Types.ObjectId.isValid(movieId)) {
-      throw createError(400, "Invalid movie ID");
+    const { seatCategory, persons } = req.body;
+    const { movieId } = req.query;
+
+    if (!movieId || !seatCategory || !persons) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing fields",
+      });
     }
 
-    // Check if movie exists
-    const movie = await MovieModel.findById(movieId);
-    if (!movie) {
-      throw createError(404, "Movie not found");
+    const movie = await MovieModel.findById(movieId as string);
+    if (!movie || !movie.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: "Movie not available",
+      });
     }
 
-    // create booking
+    const seatPrice = SEAT_PRICE_MAP[seatCategory as keyof typeof SEAT_PRICE_MAP];
+    if (!seatPrice) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid seat category",
+      });
+    }
+
+    const totalAmount = seatPrice * persons;
+
+    const seatNumbers = await allocateSeats(
+      movieId as string,
+      seatCategory,
+      persons
+    );
+
     const booking = await BookingModel.create({
       user: userId,
       movie: movieId,
+      seatCategory,
       seatNumbers,
-      bookingTime: new Date(), // current time
+      persons,
+      totalAmount,
+      status: "PENDING",
+      paymentStatus: "PENDING",
     });
 
-    res.status(201).json({
+    const populatedBooking = await BookingModel.findById(booking._id)
+      .populate("user", "fullName email")
+      .populate("movie", "name genre durationMinutes");
+
+    return res.status(201).json({
       success: true,
-      message: "Ticket booked successfully",
-      data: booking,
+      message: "Booking created successfully",
+      booking: populatedBooking,
     });
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({
+    console.log("Error creating booking", error);
+    return res.status(500).json({
       success: false,
-      message: error.message || "Something went wrong while booking",
+      message: error.message,
     });
   }
 };
 
-// Confirm booking thicket
-// export const confirmBooking = async (
-//   req: Request,
-//   res: Response
-// ): Promise<void> => {
-//   try {
-//     const bookingId = req.params.bookingId;
 
-//     if (!bookingId) {
-//       throw createError(400, "Invalid Booking ID");
-//     }
+export const confirmPayment = async (req: Request, res: Response) => {
+  try {
+    const { bookingId } = req.body;
 
-//     const booking = await BookingModel.findById(bookingId)
-//       .populate("user", "fullname email")
-//       .populate("movie", "name genre time rating");
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking ID",
+      });
+    }
 
-//     if (!booking) {
-//       throw createError(404, "Booking not found");
-//     }
+    const booking = await BookingModel.findById(bookingId);
 
-//     if (booking.confirmed) {
-//       throw createError(400, "Booking already confirmed");
-//     }
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
+    }
 
-//     // Confirm booking
-//     booking.confirmed = true;
-//     await booking.save();
+    // already handled case
+    if (booking.paymentStatus === "PAID") {
+      return res.status(200).json({
+        success: true,
+        message: "Payment already confirmed",
+        booking,
+      });
+    }
 
-//     // Send mail if user and movie populated
-//     const user = booking.user as any;
-//     const movie = booking.movie as any;
+    booking.paymentStatus = "PAID";
+    booking.status = "CONFIRMED";
 
-//     const timeString = movie?.time || "N/A";
+    await booking.save();
 
-//     await sendMail({
-//       to: user.email,
-//       subject: "🎟️ Your Ticket is Confirmed!",
-//       html: `
-//         <h3>Hi ${user?.fullname || "User"},</h3>
-//         <p>Your ticket for <strong>${movie?.name || "Movie"
-//         }</strong> is confirmed!</p>
-//         <p>🪑 Seats: ${booking?.seatNumbers?.join(", ")}</p>
-//         <p>📍 Date: ${new Date(booking?.bookingTime).toDateString()}</p>
-//         <p>⏰ Time: ${timeString}</p>
-//         <br/>
-//         <p>Enjoy your show! 🍿</p>
-//       `,
-//     });
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Booking confirmed successfully",
-//       data: booking,
-//     });
-//   } catch (error: any) {
-//     res.status(error.statusCode || 500).json({
-//       success: false,
-//       message:
-//         error.message || "Something went wrong while confirming the booking",
-//     });
-//   }
-// };
-
-// Giving Rating and Review to the movie
-// export const giveRatingAndReview = async (
-//   req: Request,
-//   res: Response
-// ): Promise<void> => {
-//   try {
-//     const bookingId = req.params.bookingId;
-//     const { rating, review } = req.body;
-
-//     // Input validation
-//     if (!bookingId || typeof rating !== "number" || !review) {
-//       throw createError(400, "Booking ID, rating and review are required");
-//     }
-
-//     // Check rating range
-//     if (rating < 1 || rating > 5) {
-//       throw createError(400, "Booking ID, rating and review are required");
-//     }
-
-//     // Find booking
-//     const booking = await BookingModel.findById(bookingId);
-
-//     if (!booking) {
-//       throw createError(404, "Booking not found");
-//     }
-
-//     if (!booking.confirmed) {
-//       throw createError(400, "Only confirmed bookings can be reviewed");
-//     }
-
-//     // check if already rated or reviewed
-//     if (booking.rating || booking.review) {
-//       throw createError(400, "You have already rated or reviewed this booking");
-//     }
-
-//     // Add rating and review
-//     booking.rating = rating;
-//     booking.review = review;
-//     await booking.save();
-
-//     res.status(200).json({
-//       success: true,
-//       message: "Thank you for your feedback!",
-//       data: {
-//         movie: booking.movie,
-//         rating: booking.rating,
-//         review: booking.review,
-//       },
-//     });
-//   } catch (error: any) {
-//     res.status(error.statusCode || 500).json({
-//       success: false,
-//       message:
-//         error.message ||
-//         "Something went wrong while submitting your rating and review",
-//     });
-//   }
-// };
+    return res.status(200).json({
+      success: true,
+      message: "Payment successful, booking confirmed",
+      booking,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

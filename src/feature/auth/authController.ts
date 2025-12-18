@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
 import { UserModel } from "./users.model";
-import { Role } from "./authTypes";
+import { Role } from "../RBAC/Role";
 
 // Controller for Register User
 export const register = async (req: Request, res: Response) => {

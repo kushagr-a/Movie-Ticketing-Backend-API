@@ -101,3 +101,28 @@ export const addMovie = async (req: Request, res: Response) => {
         });
     }
 };
+
+export const getAllMovies = async (req: Request, res: Response) => {
+    try {
+        const filter = { isActive: true };
+
+        const [movies, total] = await Promise.all([
+            MovieModel.find(filter)
+            .populate("createdByRole")
+            .sort({ createdAt: -1 }),
+            MovieModel.countDocuments(filter),
+        ]);
+        return res.status(200).json({
+            success: true,
+            message: "Movies fetched successfully",
+            totalMovies: total,
+            movies,
+        });
+    } catch (error: any) {
+        console.error("Error in getAllMovies:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch movies",
+        });
+    }
+};

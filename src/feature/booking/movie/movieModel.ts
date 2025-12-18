@@ -150,6 +150,17 @@ const movieSchema = new Schema<IMovie>(
 
 movieSchema.index({ industry: 1, genre: 1, rating: -1 });
 
+movieSchema.virtual("createdByRole", {
+  ref: "User",
+  localField: "createdBy",
+  foreignField: "_id",
+  justOne: true,
+  options: { select: "role -_id" },
+});
+
+movieSchema.set("toJSON", { virtuals: false });
+movieSchema.set("toObject", { virtuals: false });
+
 
 export const MovieModel: Model<IMovie> =
   mongoose.models.Movie || mongoose.model<IMovie>("Movie", movieSchema);

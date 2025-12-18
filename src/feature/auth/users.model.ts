@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { Role } from "./authTypes";
+import { Role } from "../RBAC/Role";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
