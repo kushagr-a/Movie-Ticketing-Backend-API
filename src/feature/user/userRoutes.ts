@@ -6,7 +6,9 @@ import {
   getAllMovies,
   searchMovie,
   bookMovie,
-  confirmBooking
+  confirmBooking,
+  userBookingHistory,
+  userFeedBack,
   // BookTicket,
   // confirmBooking,
   // giveRatingAndReview,
@@ -54,20 +56,15 @@ userRouter.route("/confirmBooking").patch(
   confirmBooking
 )
 
+userRouter.route("/userBookingHistory").get(
+  verifyToken,
+  authorizeRole(Role.USER),
+  userBookingHistory
+)
 
-// booking movie tickets
-// userRouter.route("/bookTicket").post(
-//   verifyToken,
-//   authorizeRole(Role.USER),
-//   BookTicket
-// );
-// router.get("/test", (req: Request, res: Response)=>{
-//   res.send("Test route working!")
-// });
-
-// Confirm Bookig Ticket
-// router.patch("/confirm-booking/:bookingId", verifyToken, confirmBooking);
-
-// Give Rating and Review to the movie
-// router.post("/give-rating/:bookingId", verifyToken, giveRatingAndReview);
+userRouter.route("/userFeedBack").post(
+  verifyToken,
+  authorizeRole(Role.USER),
+  userFeedBack
+)
 export default userRouter;

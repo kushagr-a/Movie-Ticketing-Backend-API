@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 import app from "./app";
+import { connectRedis } from "./utils/redis/redis";
 
 // Connection monitoring status
 let lastMonitoringTime = Date.now();
@@ -17,7 +18,8 @@ setInterval(monitorConnection, MONITORING_INTERVAL);
 
 const startServer = async () => {
     try {
-        const server = app.listen(process.env.PORT, () => {
+        const server = app.listen(process.env.PORT, async () => {
+            await connectRedis();
             console.log(`Server running at http://localhost:${process.env.PORT}`);
         })
 

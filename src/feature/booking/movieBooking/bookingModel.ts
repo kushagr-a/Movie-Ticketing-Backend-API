@@ -18,6 +18,12 @@ export interface IBooking extends Document {
   bookingTime: Date;
   rating?: number;
   review?: string;
+  aiModeration?: {
+    allowed: boolean;
+    categories: string[];
+    sentiment: "positive" | "neutral" | "negative";
+    confidence: number;
+  }
 }
 
 const bookingSchema = new Schema<IBooking>(

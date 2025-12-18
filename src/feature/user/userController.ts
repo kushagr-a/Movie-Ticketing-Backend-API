@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-// import { createError } from "../../utils/createError.utils";
+import crypto from "crypto";
 import { MovieModel } from "../booking/movie/movieModel";
 import mongoose from "mongoose";
 import { BookingModel } from "../booking/movieBooking/bookingModel";
@@ -10,6 +10,11 @@ import { allocateSeats } from "../../utils/services/seatHelperFun";
 import { Types } from "mongoose";
 import { IMovie } from "../booking/movie/movieModel";
 import { IUser } from "../auth/users.model";
+import { moderateFeedBack } from "../../utils/ai/feedBackModeration";
+import { analyzeSentiment } from "../../utils/ai/sentimentAnalysis"
+import { redisClient } from "../../utils/redis/redis";
+import { geminiModerateFeedback } from "../../utils/ai/geminiModeration";
+import { localModeration } from "../../utils/ai/localModeration";
 
 // Getting User profile
 export const userProfile = async (req: Request, res: Response) => {
@@ -216,8 +221,6 @@ export const bookMovie = async (req: Request, res: Response) => {
   }
 };
 
-
-
 // Type guard to check if user is populated
 const isPopulatedUser = (user: Types.ObjectId | IUser): user is IUser => {
   return user && typeof user === "object" && "email" in user;
@@ -233,9 +236,9 @@ export const confirmBooking = async (req: Request, res: Response) => {
     const { bookingId } = req.query;
 
     if (!bookingId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid booking ID" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking ID"
       });
     }
 
@@ -244,9 +247,9 @@ export const confirmBooking = async (req: Request, res: Response) => {
       .populate("movie", "name genre durationMinutes");
 
     if (!booking) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Booking not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found"
       });
     }
 
@@ -303,6 +306,165 @@ export const confirmBooking = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+// user booking history
+export const userBookingHistory = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const bookings = await BookingModel.find({ user: userId })
+      .populate("user", "fullName email")
+      .populate("movie", "name genre durationMinutes");
+
+    return res.status(200).json({
+      success: true,
+      message: "Booking history fetched successfully",
+      bookings,
+    });
+  } catch (error: any) {
+    console.log("Error fetching booking history", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+export const userFeedBack = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    const movieId = req.query.movieId as string;
+    const { rating, review } = req.body;
+
+    //  basic validation
+    if (!userId || !movieId || !rating || !review) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing fields",
+      });
+    }
+
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Rating must be between 1 and 5",
+      });
+    }
+
+    //  check confirmed booking
+    const booking = await BookingModel.findOne({
+      user: userId,
+      movie: movieId,
+      status: "CONFIRMED",
+    });
+
+    if (!booking) {
+      return res.status(403).json({
+        success: false,
+        message: "You can give feedback only after watching the movie",
+      });
+    }
+
+    //  prevent duplicate feedback
+    if (booking.review) {
+      return res.status(409).json({
+        success: false,
+        message: "Feedback already submitted",
+      });
+    }
+
+    // LOCAL moderation (FIRST & MUST)
+    const localCheck = localModeration(review);
+
+    if (!localCheck.allowed) {
+      return res.status(400).json({
+        success: false,
+        message: "Your feedback violates content policy",
+        categories: localCheck.categories,
+      });
+    }
+
+    // Redis key
+    const reviewHash = crypto
+      .createHash("sha256")
+      .update(review)
+      .digest("hex");
+
+    const redisKey = `feedback:${userId}:${movieId}:${reviewHash}`;
+
+    let categories: string[] = [];
+    let sentiment: "positive" | "neutral" | "negative" = "neutral";
+
+    const cached = await redisClient.get(redisKey);
+
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      categories = parsed.categories;
+      sentiment = parsed.sentiment;
+    } else {
+      //  GEMINI moderation (SMART but optional)
+      try {
+        const geminiResult = await geminiModerateFeedback(review);
+
+        if (!geminiResult.allowed) {
+          return res.status(400).json({
+            success: false,
+            message: "Your feedback violates content policy",
+            categories: geminiResult.categories,
+          });
+        }
+
+        categories = geminiResult.categories;
+      } catch (err) {
+        console.warn("⚠️ Gemini unavailable, local moderation used");
+      }
+
+      // sentiment (optional)
+      try {
+        sentiment = await analyzeSentiment(review);
+      } catch {
+        sentiment = "neutral";
+      }
+
+      await redisClient.set(
+        redisKey,
+        JSON.stringify({ categories, sentiment }),
+        { EX: 60 * 60 * 24 }
+      );
+    }
+
+    //  save feedback
+    booking.rating = rating;
+    booking.review = review;
+    booking.aiModeration = {
+      allowed: true,
+      categories,
+      sentiment,
+      confidence: 0.7,
+    };
+
+    await booking.save()
+
+    return res.status(200).json({
+      success: true,
+      message: "Feedback submitted successfully",
+      sentiment,
+    });
+  } catch (error) {
+    console.error("Error submitting feedback", error);
+    return res.status(500).json({
+      success: false,
+      message: "Feedback processing failed",
     });
   }
 };
