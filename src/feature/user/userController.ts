@@ -3,10 +3,13 @@ import { Request, Response } from "express";
 import { MovieModel } from "../booking/movie/movieModel";
 import mongoose from "mongoose";
 import { BookingModel } from "../booking/movieBooking/bookingModel";
-import { sendMail } from "../../utils/mail/sendMail";
+import { sendBookingConfirmation } from "../../utils/mail/sendMail";
 import { UserModel } from "../auth/users.model";
 import { SEAT_PRICE_MAP } from "../../utils/constant/constants";
 import { allocateSeats } from "../../utils/services/seatHelperFun";
+import { Types } from "mongoose";
+import { IMovie } from "../booking/movie/movieModel";
+import { IUser } from "../auth/users.model";
 
 // Getting User profile
 export const userProfile = async (req: Request, res: Response) => {
@@ -116,6 +119,7 @@ export const bookMovie = async (req: Request, res: Response) => {
     const { seatCategory, persons } = req.body;
     const { movieId } = req.query;
 
+    //  basic validation
     if (!movieId || !seatCategory || !persons) {
       return res.status(400).json({
         success: false,
@@ -123,6 +127,14 @@ export const bookMovie = async (req: Request, res: Response) => {
       });
     }
 
+    if (!Number.isInteger(persons) || persons <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid number of persons",
+      });
+    }
+
+    //  movie check
     const movie = await MovieModel.findById(movieId as string);
     if (!movie || !movie.isActive) {
       return res.status(404).json({
@@ -131,7 +143,24 @@ export const bookMovie = async (req: Request, res: Response) => {
       });
     }
 
-    const seatPrice = SEAT_PRICE_MAP[seatCategory as keyof typeof SEAT_PRICE_MAP];
+    //  block duplicate booking (same user + same movie)
+    const existingBooking = await BookingModel.findOne({
+      user: userId,
+      movie: movieId,
+      status: { $in: ["PENDING", "CONFIRMED"] },
+    });
+
+    if (existingBooking) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have an active booking for this movie",
+      });
+    }
+
+    //  seat price
+    const seatPrice =
+      SEAT_PRICE_MAP[seatCategory as keyof typeof SEAT_PRICE_MAP];
+
     if (!seatPrice) {
       return res.status(400).json({
         success: false,
@@ -141,12 +170,14 @@ export const bookMovie = async (req: Request, res: Response) => {
 
     const totalAmount = seatPrice * persons;
 
+    //  allocate seats
     const seatNumbers = await allocateSeats(
       movieId as string,
       seatCategory,
       persons
     );
 
+    //  create booking
     const booking = await BookingModel.create({
       user: userId,
       movie: movieId,
@@ -158,6 +189,7 @@ export const bookMovie = async (req: Request, res: Response) => {
       paymentStatus: "PENDING",
     });
 
+    //  populate response
     const populatedBooking = await BookingModel.findById(booking._id)
       .populate("user", "fullName email")
       .populate("movie", "name genre durationMinutes");
@@ -168,6 +200,14 @@ export const bookMovie = async (req: Request, res: Response) => {
       booking: populatedBooking,
     });
   } catch (error: any) {
+    //  duplicate index safety (optional but recommended)
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have an active booking for this movie",
+      });
+    }
+
     console.log("Error creating booking", error);
     return res.status(500).json({
       success: false,
@@ -177,43 +217,86 @@ export const bookMovie = async (req: Request, res: Response) => {
 };
 
 
-export const confirmPayment = async (req: Request, res: Response) => {
-  try {
-    const { bookingId } = req.body;
 
-    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid booking ID",
+// Type guard to check if user is populated
+const isPopulatedUser = (user: Types.ObjectId | IUser): user is IUser => {
+  return user && typeof user === "object" && "email" in user;
+};
+
+// Type guard to check if movie is populated
+const isPopulatedMovie = (movie: Types.ObjectId | IMovie): movie is IMovie => {
+  return movie && typeof movie === "object" && "name" in movie;
+};
+
+export const confirmBooking = async (req: Request, res: Response) => {
+  try {
+    const { bookingId } = req.query;
+
+    if (!bookingId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid booking ID" 
       });
     }
 
-    const booking = await BookingModel.findById(bookingId);
+    const booking = await BookingModel.findById(bookingId)
+      .populate("user", "fullName email")
+      .populate("movie", "name genre durationMinutes");
 
     if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found",
+      return res.status(404).json({ 
+        success: false, 
+        message: "Booking not found" 
       });
     }
 
-    // already handled case
     if (booking.paymentStatus === "PAID") {
       return res.status(200).json({
         success: true,
-        message: "Payment already confirmed",
+        message: "Booking already confirmed",
         booking,
       });
     }
 
     booking.paymentStatus = "PAID";
     booking.status = "CONFIRMED";
-
     await booking.save();
+
+    // Type guard checks
+    if (!isPopulatedUser(booking.user)) {
+      return res.status(500).json({
+        success: false,
+        message: "User not populated",
+      });
+    }
+
+    if (!isPopulatedMovie(booking.movie)) {
+      return res.status(500).json({
+        success: false,
+        message: "Movie not populated",
+      });
+    }
+
+    const user = booking.user;
+    const movie = booking.movie;
+
+    await sendBookingConfirmation(
+      user.email,
+      {
+        userName: user.fullName,
+        movieName: movie.name,
+        showTime: "7:30 PM",
+        showDate: "18 Dec 2025",
+        seats: booking.seatNumbers,
+        totalAmount: booking.totalAmount,
+        bookingId: booking._id.toString(),
+        theatreName: "PVR Cinemas",
+      }
+    );
 
     return res.status(200).json({
       success: true,
-      message: "Payment successful, booking confirmed",
+      message: "Booking confirmed & ticket sent",
       booking,
     });
   } catch (error: any) {

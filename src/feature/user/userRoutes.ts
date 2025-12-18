@@ -1,12 +1,12 @@
 import { Router } from "express";
-/**
- * Controller modules
- */
+
+// Controller modules
 import {
   userProfile,
   getAllMovies,
   searchMovie,
-  bookMovie
+  bookMovie,
+  confirmBooking
   // BookTicket,
   // confirmBooking,
   // giveRatingAndReview,
@@ -14,7 +14,6 @@ import {
 
 import { Role } from "../RBAC/Role"
 import { authorizeRole } from "../RBAC/roleAuthorize"
-
 import { verifyToken } from "../auth/tokenVerify";
 
 const userRouter = Router();
@@ -47,6 +46,14 @@ userRouter.route("/bookMovie").post(
   authorizeRole(Role.USER),
   bookMovie
 )
+
+// confirm booking
+userRouter.route("/confirmBooking").patch(
+  verifyToken,
+  authorizeRole(Role.USER),
+  confirmBooking
+)
+
 
 // booking movie tickets
 // userRouter.route("/bookTicket").post(

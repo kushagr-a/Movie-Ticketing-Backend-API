@@ -1,12 +1,14 @@
 import { Schema, model, Document, Types } from "mongoose";
+import { IUser } from "../../auth/users.model";
+import { IMovie } from "../movie/movieModel"; // Add this import
 
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELLED";
 export type SeatCategory = "PREMIUM" | "GOLD" | "SILVER";
 export type PaymentStatus = "PENDING" | "PAID" | "FAILED";
 
 export interface IBooking extends Document {
-  user: Types.ObjectId;
-  movie: Types.ObjectId;
+  user: Types.ObjectId | IUser;
+  movie: Types.ObjectId | IMovie; // Updated to include IMovie
   seatCategory: SeatCategory;
   seatNumbers: string[];
   persons: number;
