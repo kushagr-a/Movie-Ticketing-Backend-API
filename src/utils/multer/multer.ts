@@ -9,7 +9,7 @@ const storage = new CloudinaryStorage({
     return {
       folder: "movie_poster",
       resource_type: "image",
-      allowed_formats: ["jpg", "jpeg", "png", "webp"],
+      allowed_formats: ["jpg", "jpeg", "png", "webp", "jfif"],
       public_id: `movie-${Date.now()}`,
     };
   },

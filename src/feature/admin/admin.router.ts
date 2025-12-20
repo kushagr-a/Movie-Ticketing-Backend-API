@@ -3,7 +3,14 @@ import { authorizeRole } from "../RBAC/roleAuthorize";
 import { Role } from "../RBAC/Role";
 import { verifyToken } from "../auth/tokenVerify";
 import { gettingAllUserProfile } from "./admin.controller";
-import { addMovie } from "./admin.controller";
+import {
+    addMovie,
+    getAllMovies,
+    getMovieByAdmin,
+    updateMovieById,
+    deleteMovieById,
+
+} from "./admin.controller";
 import { upload } from "../../utils/multer/multer";
 const adminRouter = Router();
 
@@ -13,12 +20,29 @@ adminRouter.route("/addMovie").post(
     upload.single("poster"),
     addMovie
 );
-// adminRouter.route("/getAllMovies").get();
+adminRouter.route("/getAllMovies").get(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    getAllMovies
+);
 
 // admin get movie those only added by admin
-// adminRouter.route("/getMovieByAdmin").get();
-// adminRouter.route("/updateMovieById").put();
-// adminRouter.route("/deleteMovieById").delete();
+adminRouter.route("/getMovieByAdmin").get(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    getMovieByAdmin
+);
+adminRouter.route("/updateMovieById/:id").patch(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    upload.single("poster"),
+    updateMovieById
+);
+adminRouter.route("/deleteMovieById/:id").delete(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    deleteMovieById
+);
 
 // moderator router
 // admin get movie those only added by moderator

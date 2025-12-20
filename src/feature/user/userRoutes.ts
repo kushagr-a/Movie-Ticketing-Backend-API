@@ -9,9 +9,6 @@ import {
   confirmBooking,
   userBookingHistory,
   userFeedBack,
-  // BookTicket,
-  // confirmBooking,
-  // giveRatingAndReview,
 } from "./userController";
 
 import { Role } from "../RBAC/Role"
@@ -24,7 +21,7 @@ const userRouter = Router();
 // Getting user profile
 userRouter.route("/profile/:id").get(
   verifyToken,
-  authorizeRole(Role.USER),
+  authorizeRole(Role.USER, Role.ADMIN, Role.MODERATOR),
   userProfile
 )
 
@@ -45,7 +42,7 @@ userRouter.route("/searchMovie").get(
 // book movie
 userRouter.route("/bookMovie").post(
   verifyToken,
-  authorizeRole(Role.USER),
+  authorizeRole(Role.USER, Role.ADMIN, Role.MODERATOR),
   bookMovie
 )
 
@@ -58,7 +55,7 @@ userRouter.route("/confirmBooking").patch(
 
 userRouter.route("/userBookingHistory").get(
   verifyToken,
-  authorizeRole(Role.USER),
+  authorizeRole(Role.USER, Role.ADMIN, Role.MODERATOR),
   userBookingHistory
 )
 
