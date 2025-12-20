@@ -40,6 +40,7 @@ export enum MovieGenre {
   DRAMA = "drama",
   SCIFI = "sci-fi",
   ROMANTIC = "romantic",
+  THRILLER = "thriller",
 }
 
 export enum MovieIndustry {

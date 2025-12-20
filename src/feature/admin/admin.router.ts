@@ -3,9 +3,16 @@ import { authorizeRole } from "../RBAC/roleAuthorize";
 import { Role } from "../RBAC/Role";
 import { verifyToken } from "../auth/tokenVerify";
 import { gettingAllUserProfile } from "./admin.controller";
+import { addMovie } from "./admin.controller";
+import { upload } from "../../utils/multer/multer";
 const adminRouter = Router();
 
-// adminRouter.route("/addMovie").post();
+adminRouter.route("/addMovie").post(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    upload.single("poster"),
+    addMovie
+);
 // adminRouter.route("/getAllMovies").get();
 
 // admin get movie those only added by admin

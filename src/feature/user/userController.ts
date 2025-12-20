@@ -10,8 +10,8 @@ import { allocateSeats } from "../../utils/services/seatHelperFun";
 import { Types } from "mongoose";
 import { IMovie } from "../booking/movie/movieModel";
 import { IUser } from "../auth/users.model";
-import { moderateFeedBack } from "../../utils/ai/feedBackModeration";
-import { analyzeSentiment } from "../../utils/ai/sentimentAnalysis"
+// import { moderateFeedBack } from "../../utils/ai/openAi/feedBackModeration";
+import { analyzeSentiment } from "../../utils/ai/openAi/sentimentAnalysis"
 import { redisClient } from "../../utils/redis/redis";
 import { geminiModerateFeedback } from "../../utils/ai/geminiModeration";
 import { localModeration } from "../../utils/ai/localModeration";

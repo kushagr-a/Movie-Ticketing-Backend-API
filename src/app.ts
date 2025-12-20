@@ -1,18 +1,32 @@
 import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+
 import apiRoutes from "./apiRoutes";
-import connectDB from "./db/db";
+
 const app = express();
 
-// Core Modules
-import cookieParser from "cookie-parser";
-import cors from "cors";
+// Security headers
+app.use(helmet());
 
-// Core Middleware
-app.use(express.json()); // Handling JSON data
-app.use(express.urlencoded({ extended: true })); // Handling form data
-app.use(cookieParser()); // Parse cookies
+// Rate limiting
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 min
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
-// CORS Middleware
+// Body parsers
+app.use(express.json({ limit: "10kb" }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(cookieParser());
+
+// CORS
 app.use(cors({
   origin: process.env.CORS_ORIGIN?.split(",") || "http://localhost:5173",
   credentials: true,
@@ -20,24 +34,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-// Lazy DB Connection Middleware
-import { skipDb } from "./utils/SkipRoutes/skipDb";
-app.use(async (req, res, next) => {
-  try {
-    if (!skipDb(req.path)) {
-      // Connect to DB only when needed
-      await connectDB();
-    }
-    next();
-  } catch (error: any) {
-    console.error("MongoDB connection error:", error.message);
-    return res.status(500).json({
-      error: "Database connection error"
-    });
-  }
-});
-
-// Health Monitoring Route 
+// Health check
 app.get("/health", (req, res) => {
   const memUsage = process.memoryUsage();
   const cpuUsage = process.cpuUsage();
@@ -59,7 +56,8 @@ app.get("/health", (req, res) => {
 });
 
 
-// Main API Routes
+//  API Routes
 app.use("/api", apiRoutes);
+
 
 export default app;

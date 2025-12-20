@@ -1,42 +1,47 @@
 import dotenv from "dotenv";
 dotenv.config();
+
 import app from "./app";
-import { connectRedis } from "./utils/redis/redis";
+import connectDB, { disconnectDB } from "./db/db";
+import { connectRedis, disconnectRedis } from "./utils/redis/redis";
 
-// Connection monitoring status
-let lastMonitoringTime = Date.now();
-const MONITORING_INTERVAL = 60 * 60 * 1000; // 1 hour
-
-const monitorConnection = () => {
-    const now = Date.now();
-    if (now - lastMonitoringTime >= MONITORING_INTERVAL) {
-        console.log("Monitoring connection...");
-        lastMonitoringTime = now;
-    }
-}
-setInterval(monitorConnection, MONITORING_INTERVAL);
+const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-    try {
-        const server = app.listen(process.env.PORT, async () => {
-            await connectRedis();
-            console.log(`Server running at http://localhost:${process.env.PORT}`);
-        })
+  try {
+    // Connect infra once
+    await connectDB();
+    await connectRedis();
 
-        // Graceful shutdown 
-        process.on("SIGINT", () => {
-            server.close(() => {
-                console.log("Server closed...");
-                process.exit(0);
-            })
-        })
+    const server = app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
 
+    //  Graceful shutdown
+    const shutdown = async (signal: string) => {
+      console.log(`\n${signal} received. Shutting down gracefully...`);
 
-    } catch (error) {
-        console.log(error);
-        process.exit(1);
-    }
-}
+      server.close(async () => {
+        console.log("HTTP server closed");
 
+        //  CLOSE INFRA EXPLICITLY
+        await disconnectRedis();
+        await disconnectDB();
+
+        // DO NOT FORCE EXIT IMMEDIATELY
+        setTimeout(() => {
+          process.exit(0);
+        }, 100); // allow logs to flush
+      });
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+
+  } catch (error) {
+    console.error("Server startup failed:", error);
+    process.exit(1);
+  }
+};
 
 startServer();
