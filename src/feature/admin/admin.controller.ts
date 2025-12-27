@@ -3,6 +3,7 @@ import { UserModel } from "../auth/users.model"
 import { MovieModel } from "../booking/movie/movieModel"
 import cloudinary from "../../utils/cloudinary/cloudinary"
 import mongoose from "mongoose"
+import { BookingModel } from "../booking/movieBooking/bookingModel";
 
 // add movie by admin
 export const addMovie = async (req: Request, res: Response) => {
@@ -326,6 +327,113 @@ export const deleteMovieById = async (req: Request, res: Response) => {
         });
     } catch (error: any) {
         console.error("DELETE MOVIE ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+export const getparticularUserFeedBack = async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const { userId } = req.query;
+
+        // Validate user id
+        if (!mongoose.Types.ObjectId.isValid(userId as string)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user id",
+            });
+        }
+
+        //  Fetch user
+        const user = await UserModel.findById(userId).select("-password -__v");
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        //  AGGREGATION PIPELINE
+        const feedbacks = await BookingModel.aggregate([
+            {
+                $match: {
+                    user: new mongoose.Types.ObjectId(userId as string),
+                    status: "CONFIRMED",
+                    $or: [
+                        { rating: { $ne: null } },
+                        { review: { $ne: null } },
+                    ],
+                },
+            },
+            {
+                $lookup: {
+                    from: "movies",
+                    localField: "movie",
+                    foreignField: "_id",
+                    as: "movieData",
+                },
+            },
+            { $unwind: "$movieData" },
+            {
+                $project: {
+                    _id: 0,
+                    movieName: "$movieData.name",
+                    rating: 1,
+                    review: 1,
+                },
+            },
+        ]);
+        return res.status(200).json({
+            success: true,
+            message: "User feedback fetched successfully",
+            user,
+            totalFeedbacks: feedbacks.length,
+            feedbacks,
+        });
+    } catch (error: any) {
+        console.error("AGGREGATION USER FEEDBACK ERROR:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
+};
+
+export const deleteUserBythereUserId = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+
+        // Validate user id
+        if (!mongoose.Types.ObjectId.isValid(userId as string)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid user id",
+            });
+        }
+
+        //  Fetch user
+        const user = await UserModel.findById(userId).select("-password -__v");
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+
+        //  Delete user
+        await user.deleteOne();
+
+        return res.status(200).json({
+            success: true,
+            message: "User deleted successfully",
+        });
+    } catch (error: any) {
+        console.error("Error deleting user:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error",

@@ -388,7 +388,7 @@ export const getparticularUserFeedBack = async (
     try {
         const { userId } = req.query;
 
-        //  Validate user id
+        // Validate user id
         if (!mongoose.Types.ObjectId.isValid(userId as string)) {
             return res.status(400).json({
                 success: false,
@@ -405,22 +405,36 @@ export const getparticularUserFeedBack = async (
             });
         }
 
-        //  Fetch feedback (only where review or rating exists)
-        const feedbackDocs = await BookingModel.find({
-            user: userId,
-            status: "CONFIRMED",
-            $or: [
-                { rating: { $exists: true } },
-                { review: { $exists: true } },
-            ],
-        })
-            .select("rating review");
-        const feedbacks = feedbackDocs.map((fb) => ({
-            rating: fb.rating ?? null,
-            review: fb.review ?? null,
-        }));
-
-        //  Response
+        //  AGGREGATION PIPELINE
+        const feedbacks = await BookingModel.aggregate([
+            {
+                $match: {
+                    user: new mongoose.Types.ObjectId(userId as string),
+                    status: "CONFIRMED",
+                    $or: [
+                        { rating: { $ne: null } },
+                        { review: { $ne: null } },
+                    ],
+                },
+            },
+            {
+                $lookup: {
+                    from: "movies",
+                    localField: "movie",
+                    foreignField: "_id",
+                    as: "movieData",
+                },
+            },
+            { $unwind: "$movieData" },
+            {
+                $project: {
+                    _id: 0,
+                    movieName: "$movieData.name",
+                    rating: 1,
+                    review: 1,
+                },
+            },
+        ]);
         return res.status(200).json({
             success: true,
             message: "User feedback fetched successfully",
@@ -429,7 +443,7 @@ export const getparticularUserFeedBack = async (
             feedbacks,
         });
     } catch (error: any) {
-        console.error("GET PARTICULAR USER FEEDBACK ERROR:", error);
+        console.error("AGGREGATION USER FEEDBACK ERROR:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
