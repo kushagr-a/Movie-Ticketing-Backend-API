@@ -9,7 +9,8 @@ import {
     getMovieByAdmin,
     updateMovieById,
     deleteMovieById,
-    getparticularUserFeedBack
+    getparticularUserFeedBack,
+    deleteUserBythereUserId
 
 } from "./admin.controller";
 import { upload } from "../../utils/multer/multer";
@@ -62,6 +63,10 @@ adminRouter.route("/getParticularUserFeedBack").get(
     authorizeRole(Role.ADMIN),
     getparticularUserFeedBack
 );
-// adminRouter.route("/deleteUserByName").delete();
+adminRouter.route("/deleteUserById/:userId").delete(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    deleteUserBythereUserId
+);
 
 export default adminRouter;
