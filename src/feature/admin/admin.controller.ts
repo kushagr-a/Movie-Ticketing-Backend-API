@@ -442,6 +442,8 @@ export const deleteUserBythereUserId = async (req: Request, res: Response) => {
     }
 };
 
+
+// getting movie by those added by moderator
 export const getMovieByModerator = async (req: Request, res: Response) => {
     try {
         const movies = await MovieModel.aggregate([
