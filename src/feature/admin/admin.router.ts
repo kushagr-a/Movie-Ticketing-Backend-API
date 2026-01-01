@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authorizeRole } from "../RBAC/roleAuthorize";
 import { Role } from "../RBAC/Role";
 import { verifyToken } from "../auth/tokenVerify";
-import { gettingAllUserProfile } from "./admin.controller";
+import { getMovieByModerator, gettingAllUserProfile } from "./admin.controller";
 import {
     addMovie,
     getAllMovies,
@@ -48,7 +48,11 @@ adminRouter.route("/deleteMovieById/:id").delete(
 
 // moderator router
 // admin get movie those only added by moderator
-// adminRouter.route("/getMovieByModerator").get();
+adminRouter.route("/getMovieByModerator").get(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    getMovieByModerator
+);
 // adminRouter.route("/deleteModerator").delete();
 // adminRouter.route("/getAllModerator").get();
 

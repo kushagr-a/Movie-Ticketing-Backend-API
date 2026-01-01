@@ -4,6 +4,7 @@ import { MovieModel } from "../booking/movie/movieModel"
 import cloudinary from "../../utils/cloudinary/cloudinary"
 import mongoose from "mongoose"
 import { BookingModel } from "../booking/movieBooking/bookingModel";
+import { Role } from "../RBAC/Role";
 
 // add movie by admin
 export const addMovie = async (req: Request, res: Response) => {
@@ -437,6 +438,54 @@ export const deleteUserBythereUserId = async (req: Request, res: Response) => {
         return res.status(500).json({
             success: false,
             message: "Internal server error",
+        });
+    }
+};
+
+export const getMovieByModerator = async (req: Request, res: Response) => {
+    try {
+        const movies = await MovieModel.aggregate([
+            {
+                // join with users
+                $lookup: {
+                    from: "users", // collection name (IMPORTANT)
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "creator",
+                },
+            },
+            {
+                $unwind: "$creator",
+            },
+            {
+                // filter only MODERATOR movies
+                $match: {
+                    "creator.role": Role.MODERATOR,
+                },
+            },
+            {
+                // optional: hide creator internal fields
+                $project: {
+                    "creator.password": 0,
+                    "creator.__v": 0,
+                },
+            },
+            {
+                // latest first
+                $sort: { createdAt: -1 },
+            },
+        ]);
+
+        return res.status(200).json({
+            success: true,
+            count: movies.length,
+            movies,
+        });
+    } catch (error: any) {
+        console.error("Error fetching moderator movies:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch moderator movies",
         });
     }
 };
