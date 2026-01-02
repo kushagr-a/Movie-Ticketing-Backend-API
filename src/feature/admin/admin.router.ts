@@ -10,7 +10,8 @@ import {
     updateMovieById,
     deleteMovieById,
     getparticularUserFeedBack,
-    deleteUserBythereUserId
+    deleteUserBythereUserId,
+    getAllModerator
 
 } from "./admin.controller";
 import { upload } from "../../utils/multer/multer";
@@ -54,7 +55,11 @@ adminRouter.route("/getMovieByModerator").get(
     getMovieByModerator
 );
 // adminRouter.route("/deleteModerator").delete();
-// adminRouter.route("/getAllModerator").get();
+adminRouter.route("/getAllModerator").get(
+    verifyToken,
+    authorizeRole(Role.ADMIN),
+    getAllModerator
+);
 
 // user router
 adminRouter.route("/getAllUsersProfile").get(
