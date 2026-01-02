@@ -491,3 +491,37 @@ export const getMovieByModerator = async (req: Request, res: Response) => {
         });
     }
 };
+
+// getting all moderator
+export const getAllModerator = async (req: Request, res: Response) => {
+    try {
+        const moderators = await UserModel.find(
+            {
+                role: Role.MODERATOR
+            },
+            {
+                password: 0,
+                __v: 0
+            }
+        ).sort({ createdAt: -1 })
+
+        if (moderators.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No moderator found"
+            })
+        }
+
+        return res.status(200).json({
+            success: true,
+            count: moderators.length,
+            data: moderators
+        })
+    } catch (error: any) {
+        console.error("Error fetching moderator movies:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch moderator movies",
+        });
+    }
+}
