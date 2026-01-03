@@ -442,7 +442,6 @@ export const deleteUserBythereUserId = async (req: Request, res: Response) => {
     }
 };
 
-
 // getting movie by those added by moderator
 export const getMovieByModerator = async (req: Request, res: Response) => {
     try {
@@ -526,6 +525,7 @@ export const getAllModerator = async (req: Request, res: Response) => {
     }
 }
 
+// delete particular moderator
 export const deleteModerator = async (req: Request, res: Response) => {
     try {
         const { userId } = req.query;
