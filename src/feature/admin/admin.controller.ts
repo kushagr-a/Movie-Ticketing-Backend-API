@@ -525,3 +525,58 @@ export const getAllModerator = async (req: Request, res: Response) => {
         });
     }
 }
+
+export const deleteModerator = async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.query;
+
+        //  validate userId
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId as string)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid moderator ID",
+            });
+        }
+
+        //  find user
+        const user = await UserModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "Moderator not found",
+            });
+        }
+
+        //  role check
+        if (user.role !== Role.MODERATOR) {
+            return res.status(403).json({
+                success: false,
+                message: "Only moderators can be deleted",
+            });
+        }
+
+        //  prevent self-delete (ADMIN safety)
+        const adminId = (req as any).user?.id;
+        if (adminId && user._id.toString() === adminId) {
+            return res.status(403).json({
+                success: false,
+                message: "You cannot delete yourself",
+            });
+        }
+
+        //  delete moderator
+        await UserModel.findByIdAndDelete(userId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Moderator deleted successfully",
+        });
+    } catch (error: any) {
+        console.error("Error deleting moderator:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete moderator",
+        });
+    }
+};
